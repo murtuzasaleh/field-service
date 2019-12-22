@@ -20,7 +20,14 @@ class FSMOrder(models.Model):
 
     @api.multi
     def action_view_invoices(self):
-        action = self.env.ref(
-            'account.action_account_invoice').read()[0]
-        action['domain'] = [('fsm_order_ids', 'in', self.id)]
+        action = self.env.ref('account.action_invoice_tree').read()[0]
+        invoices = self.mapped('invoice_ids')
+        invoice_ids = [invoice.id for invoice in invoices if
+                       invoice.type == 'out_invoice']
+        if len(invoice_ids) > 1:
+            action['domain'] = [('id', 'in', invoice_ids)]
+        elif invoices:
+            action['views'] = [(self.env.ref('account.invoice_form').id,
+                                'form')]
+            action['res_id'] = invoice_ids[0]
         return action
